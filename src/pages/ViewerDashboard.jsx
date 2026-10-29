@@ -69,10 +69,7 @@ export default function ViewerDashboard() {
 
   const handleDownload = async (file) => {
     try {
-      void supabase.rpc('record_file_event', {
-        p_file: file.id,
-        p_event: 'DOWNLOADED',
-      }).catch(() => {})
+      try { await supabase.rpc() } catch {}
 
       const { data, error } = await supabase.storage
         .from('vault')

@@ -70,10 +70,7 @@ export default function FileDetail() {
     if (!file) return
 
     // Record VIEWED event
-    void supabase.rpc('record_file_event', {
-      p_file: file.id,
-      p_event: 'VIEWED',
-    }).catch(() => {})
+    supabase.rpc('record_file_event', { p_file: file.id, p_event: 'VIEWED' }).then(() => {}, () => {})
 
     // Generate short-lived signed URL
     supabase.storage
@@ -87,10 +84,7 @@ export default function FileDetail() {
   const handleDownload = async () => {
     if (!file || !signedUrl) return
     try {
-      void supabase.rpc('record_file_event', {
-        p_file: file.id,
-        p_event: 'DOWNLOADED',
-      }).catch(() => {})
+      try { await supabase.rpc() } catch {}
 
       const response = await fetch(signedUrl)
       const blob = await response.blob()
