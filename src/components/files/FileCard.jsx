@@ -1,20 +1,22 @@
-import { FileText, Eye, Download, Trash2, Clock, User, Tag } from 'lucide-react'
+import { FileText, Eye, Download, Trash2, Clock, User, Tag, Folder } from 'lucide-react'
 import { formatBytes, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
 import { useAuth } from '@/features/auth/AuthProvider'
 
-export function FileCard({ file, onPreview, onDownload, onDelete }) {
+export function FileCard({ file, onOpenFolder, onPreview, onDownload, onDelete }) {
   const { profile, session } = useAuth()
   const role = profile?.role
   const currentUid = session?.user?.id
   const canDelete = can.deleteFile(role, file.uploaded_by, currentUid)
 
+  const isFolder = Boolean(file.is_folder || file.mime_type === 'application/vnd.notevault.folder')
   const isImage = file.mime_type?.startsWith('image/')
   const isPdf = file.mime_type === 'application/pdf'
   const isDoc = file.mime_type?.includes('word') || file.name.endsWith('.docx')
   const isSheet = file.mime_type?.includes('sheet') || file.name.endsWith('.xlsx') || file.name.endsWith('.csv')
 
   const getBadgeColor = () => {
+    if (isFolder) return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-900'
     if (isImage) return 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 border-purple-200 dark:border-purple-900'
     if (isPdf) return 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-900'
     if (isDoc) return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900'
@@ -22,29 +24,45 @@ export function FileCard({ file, onPreview, onDownload, onDelete }) {
     return 'bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
   }
 
+  const handleClick = () => {
+    if (isFolder) {
+      if (onOpenFolder) onOpenFolder(file)
+    } else {
+      if (onPreview) onPreview(file)
+    }
+  }
+
   return (
     <div className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-xs hover:border-slate-300 hover:shadow-md transition-all dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
       <div>
-        {/* Top bar with Category & Size */}
+        {/* Top bar with Category & Size / Folder Label */}
         <div className="flex items-center justify-between">
           <span className={`inline-flex items-center rounded-lg border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${getBadgeColor()}`}>
-            {file.category || 'General'}
+            {isFolder ? 'Folder' : (file.category || 'General')}
           </span>
           <span className="text-[11px] font-medium text-slate-400">
-            {formatBytes(file.size_bytes)}
+            {isFolder ? 'Directory' : formatBytes(file.size_bytes)}
           </span>
         </div>
 
         {/* Icon & Title */}
         <div
-          onClick={() => onPreview(file)}
+          onClick={handleClick}
           className="mt-3.5 flex items-start gap-3 cursor-pointer"
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-indigo-950/50 dark:group-hover:text-indigo-400 transition-colors">
-            <FileText className="h-5 w-5" />
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${
+            isFolder
+              ? 'bg-amber-50 text-amber-600 group-hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-400'
+              : 'bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-indigo-950/50 dark:group-hover:text-indigo-400'
+          }`}>
+            {isFolder ? <Folder className="h-6 w-6" /> : <FileText className="h-5 w-5" />}
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="truncate text-sm font-semibold text-slate-900 group-hover:text-indigo-600 dark:text-slate-100 dark:group-hover:text-indigo-400 transition-colors">
+            <h4 className={`truncate text-sm font-semibold transition-colors ${
+              isFolder
+                ? 'text-slate-900 group-hover:text-amber-600 dark:text-slate-100 dark:group-hover:text-amber-400'
+                : 'text-slate-900 group-hover:text-indigo-600 dark:text-slate-100 dark:group-hover:text-indigo-400'
+            }`}>
               {file.name}
             </h4>
             {file.description ? (
@@ -52,13 +70,13 @@ export function FileCard({ file, onPreview, onDownload, onDelete }) {
                 {file.description}
               </p>
             ) : (
-              <p className="mt-0.5 text-xs text-slate-400">No description</p>
+              <p className="mt-0.5 text-xs text-slate-400">{isFolder ? 'Open folder' : 'No description'}</p>
             )}
           </div>
         </div>
 
         {/* Tags */}
-        {file.tags && file.tags.length > 0 && (
+        {!isFolder && file.tags && file.tags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1">
             {file.tags.slice(0, 3).map((tag, idx) => (
               <span
@@ -85,24 +103,28 @@ export function FileCard({ file, onPreview, onDownload, onDelete }) {
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => onPreview(file)}
-              title="Preview file"
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800 dark:hover:text-indigo-400 transition-colors"
-            >
-              <Eye className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onDownload(file)}
-              title="Download file"
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800 dark:hover:text-indigo-400 transition-colors"
-            >
-              <Download className="h-4 w-4" />
-            </button>
+            {!isFolder && (
+              <>
+                <button
+                  onClick={() => onPreview(file)}
+                  title="Preview file"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800 dark:hover:text-indigo-400 transition-colors"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => onDownload(file)}
+                  title="Download file"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800 dark:hover:text-indigo-400 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+              </>
+            )}
             {canDelete && (
               <button
                 onClick={() => onDelete(file)}
-                title="Move to trash"
+                title={isFolder ? "Delete folder" : "Move to trash"}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />

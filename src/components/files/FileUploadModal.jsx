@@ -19,7 +19,7 @@ const ALLOWED_MIME_TYPES = [
 
 const MAX_SIZE_BYTES = 25 * 1024 * 1024 // 25 MB
 
-export function FileUploadModal({ isOpen, onClose, onUploadSuccess }) {
+export function FileUploadModal({ isOpen, onClose, currentFolderId = null, onUploadSuccess }) {
   const { session } = useAuth()
   const [file, setFile] = useState(null)
   const [description, setDescription] = useState('')
@@ -127,6 +127,8 @@ export function FileUploadModal({ isOpen, onClose, onUploadSuccess }) {
           category: category || 'General',
           tags: tags,
           uploaded_by: uid,
+          is_folder: false,
+          parent_id: currentFolderId || null,
         })
         .select()
         .single()
