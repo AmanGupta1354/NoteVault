@@ -23,22 +23,26 @@ export function usePresence(fileId = null) {
   useEffect(() => {
     const sessionKey = getSessionKey()
 
-    const beat = () => {
+    const beat = async () => {
       if (document.visibilityState === 'hidden' && !fileId) return
-      void supabase.rpc('heartbeat', {
-        p_session: sessionKey,
-        p_page: pathname,
-        p_file: fileId || null,
-      }).catch(() => {})
+      try {
+        await supabase.rpc('heartbeat', {
+          p_session: sessionKey,
+          p_page: pathname,
+          p_file: fileId || null,
+        })
+      } catch {}
     }
 
     // Initial heartbeat
     beat()
     const timer = setInterval(beat, INTERVAL_MS)
 
-    const onVisibilityChange = () => {
+    const onVisibilityChange = async () => {
       if (document.visibilityState === 'hidden') {
-        void supabase.rpc('end_session', { p_session: sessionKey }).catch(() => {})
+        try {
+          await supabase.rpc('end_session', { p_session: sessionKey })
+        } catch {}
       } else {
         beat()
       }
@@ -51,11 +55,11 @@ export function usePresence(fileId = null) {
       document.removeEventListener('visibilitychange', onVisibilityChange)
       if (fileId) {
         // Clear viewing state when closing preview
-        void supabase.rpc('heartbeat', {
+        supabase.rpc('heartbeat', {
           p_session: sessionKey,
           p_page: pathname,
           p_file: null,
-        }).catch(() => {})
+        }).then(() => {}, () => {})
       }
     }
   }, [pathname, fileId])

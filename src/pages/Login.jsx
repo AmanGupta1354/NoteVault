@@ -34,7 +34,11 @@ export default function Login() {
         if (error) throw error
 
         toast.success('Signed in successfully')
-        await supabase.rpc('touch_login').catch(() => {})
+        try {
+          await supabase.rpc('touch_login')
+        } catch {
+          // ignore background touch failure
+        }
         const profile = await refetchProfile()
         navigate(from === '/login' ? homeFor(profile?.data?.role) : from, { replace: true })
       } else {
